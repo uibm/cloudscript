@@ -1,0 +1,1087 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CloudScript | Craft your cloud-init userdata</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+    <style>
+        :root {
+            --primary: #3b82f6;
+            --primary-dark: #2563eb;
+            --secondary: #8b5cf6;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --dark: #111827;
+            --light: #f9fafb;
+            --gray: #6b7280;
+            --border: #e5e7eb;
+            --ubuntu: #e95420;
+            --centos: #932279;
+            --windows: #0078d4;
+            --debian: #a81d33;
+            --amazon: #ff9900;
+            --rhel: #cc0000;
+            --suse: #30ba78;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(145deg, #e5e7eb 0%, #d1d5db 100%);
+            color: var(--dark);
+            line-height: 1.6;
+            min-height: 100vh;
+            padding: 2rem;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1.5rem 2rem;
+            background: #fff;
+            border-radius: 1rem;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
+            margin-bottom: 2rem;
+            position: relative;
+            z-index: 10;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .logo-icon {
+            width: 3rem;
+            height: 3rem;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            border-radius: 0.75rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.5rem;
+            font-weight: 700;
+            transition: transform 0.3s ease;
+        }
+
+        .logo-icon:hover {
+            transform: rotate(360deg);
+        }
+
+        .logo-text {
+            font-size: 2rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+
+        .tagline {
+            font-size: 0.9rem;
+            color: var(--gray);
+            margin-top: 0.25rem;
+            font-weight: 500;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            padding: 1rem;
+        }
+
+        @media (max-width: 1024px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .card {
+            background: #fff;
+            border-radius: 1rem;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 32px rgba(0, 0, 0, 0.15);
+        }
+
+        .card-header {
+            padding: 1.5rem 2rem;
+            border-bottom: 1px solid var(--border);
+            background: linear-gradient(90deg, #f8fafc, #f1f5f9);
+        }
+
+        .card-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            color: var(--dark);
+        }
+
+        .card-body {
+            padding: 2rem;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            color: var(--dark);
+            font-size: 0.95rem;
+        }
+
+        select, input, textarea {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border: 1px solid var(--border);
+            border-radius: 0.5rem;
+            font-size: 1rem;
+            background: #fff;
+            transition: all 0.3s ease;
+        }
+
+        select:focus, input:focus, textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.2);
+        }
+
+        .os-selector {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+            margin-top: 0.75rem;
+        }
+
+        .os-option {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 1rem;
+            border: 2px solid var(--border);
+            border-radius: 0.75rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: #fff;
+            text-align: center;
+        }
+
+        .os-option:hover {
+            border-color: var(--primary);
+            transform: translateY(-3px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .os-option.selected {
+            border-color: var(--primary);
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.05), rgba(139, 92, 246, 0.05));
+        }
+
+        .os-icon {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+            transition: transform 0.3s ease;
+        }
+
+        .os-option:hover .os-icon {
+            transform: scale(1.1);
+        }
+
+        .ubuntu { color: var(--ubuntu); }
+        .centos { color: var(--centos); }
+        .windows { color: var(--windows); }
+        .debian { color: var(--debian); }
+        .amazon { color: var(--amazon); }
+        .rhel { color: var(--rhel); }
+        .suse { color: var(--suse); }
+
+        .tab-container {
+            margin-bottom: 1.5rem;
+        }
+
+        .tabs {
+            display: flex;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+
+        .tab {
+            padding: 0.75rem 1.5rem;
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+            font-weight: 500;
+            font-size: 0.95rem;
+            color: var(--gray);
+            transition: all 0.3s ease;
+        }
+
+        .tab:hover {
+            color: var(--primary);
+        }
+
+        .tab.active {
+            border-bottom: 3px solid var(--primary);
+            color: var(--primary);
+            font-weight: 600;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .checkbox-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            gap: 1rem;
+            margin-top: 0.75rem;
+        }
+
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            padding: 0.75rem;
+            border: 1px solid var(--border);
+            border-radius: 0.5rem;
+            transition: all 0.3s ease;
+            background: #fff;
+        }
+
+        .checkbox-item:hover {
+            background: rgba(59, 130, 246, 0.05);
+            border-color: var(--primary);
+        }
+
+        .checkbox-item input {
+            width: auto;
+            margin-right: 0.75rem;
+        }
+
+        .btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 0.85rem 1.5rem;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        .btn:hover {
+            background: var(--primary-dark);
+            transform: translateY(-3px);
+            box-shadow: 0 6px 16px rgba(59, 130, 246, 0.3);
+        }
+
+        .btn:active {
+            transform: scale(0.95);
+        }
+
+        .btn-block {
+            width: 100%;
+        }
+
+        .btn-secondary {
+            background: var(--gray);
+            color: #fff;
+        }
+
+        .btn-secondary:hover {
+            background: #4b5563;
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+        }
+
+        .btn-secondary:active {
+            transform: scale(0.95);
+        }
+
+        .output-container {
+            background: #1f2937;
+            color: #e5e7eb;
+            padding: 1.5rem;
+            border-radius: 0.75rem;
+            margin-top: 1rem;
+            max-height: 500px;
+            overflow-y: auto;
+            font-family: 'JetBrains Mono', 'Consolas', monospace;
+            font-size: 0.9rem;
+            line-height: 1.6;
+            position: relative;
+            border: 1px solid #374151;
+            white-space: pre-wrap;
+        }
+
+        .output-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            font-size: 0.9rem;
+            color: var(--gray);
+        }
+
+        .os-badge {
+            padding: 0.4rem 1rem;
+            border-radius: 1rem;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: white;
+            transition: transform 0.3s ease;
+        }
+
+        .os-badge:hover {
+            transform: scale(1.05);
+        }
+
+        .badge-ubuntu { background: var(--ubuntu); }
+        .badge-centos { background: var(--centos); }
+        .badge-windows { background: var(--windows); }
+        .badge-debian { background: var(--debian); }
+        .badge-amazon { background: var(--amazon); }
+        .badge-rhel { background: var(--rhel); }
+        .badge-suse { background: var(--suse); }
+
+        .actions {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+
+        .notification {
+            padding: 0.75rem 1rem;
+            border-radius: 0.5rem;
+            margin-top: 1rem;
+            text-align: center;
+            font-weight: 500;
+            opacity: 0;
+            transform: translateY(10px);
+            transition: all 0.3s ease;
+        }
+
+        .notification.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .success {
+            background: rgba(16, 185, 129, 0.1);
+            color: #065f46;
+            border: 1px solid rgba(16, 185, 129, 0.3);
+        }
+
+        .warning {
+            background: rgba(245, 158, 11, 0.1);
+            color: #92400e;
+            border: 1px solid rgba(245, 158, 11, 0.3);
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 3rem;
+            padding: 1.5rem;
+            color: var(--gray);
+            font-size: 0.9rem;
+            border-top: 1px solid var(--border);
+        }
+
+        #raw-output {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="logo">
+                <div class="logo-icon">C</div>
+                <div>
+                    <div class="logo-text">CloudScript</div>
+                    <div class="tagline">Craft your cloud-init user data script with ease</div>
+                </div>
+            </div>
+            <div class="actions">
+                <button class="btn" id="docs-btn">
+                    <i class="fas fa-book"></i> Documentation
+                </button>
+            </div>
+        </header>
+        
+        <div class="main-content">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">
+                        <i class="fas fa-cog"></i> Configuration
+                    </h2>
+                </div>
+                <div class="card-body">
+                    <div class="form-group">
+                        <label>Operating System</label>
+                        <div class="os-selector">
+                            <div class="os-option selected" data-os="ubuntu">
+                                <i class="fab fa-ubuntu os-icon ubuntu"></i>
+                                <div>Ubuntu</div>
+                            </div>
+                            <div class="os-option" data-os="centos">
+                                <i class="fab fa-centos os-icon centos"></i>
+                                <div>CentOS</div>
+                            </div>
+                            <div class="os-option" data-os="windows">
+                                <i class="fab fa-windows os-icon windows"></i>
+                                <div>Windows</div>
+                            </div>
+                            <div class="os-option" data-os="debian">
+                                <i class="fab fa-debian os-icon debian"></i>
+                                <div>Debian</div>
+                            </div>
+                            <div class="os-option" data-os="amazon">
+                                <i class="fab fa-aws os-icon amazon"></i>
+                                <div>Amazon Linux</div>
+                            </div>
+                            <div class="os-option" data-os="rhel">
+                                <i class="fas fa-server os-icon rhel"></i>
+                                <div>RHEL</div>
+                            </div>
+                            <div class="os-option" data-os="suse">
+                                <i class="fas fa-server os-icon suse"></i>
+                                <div>SUSE</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="tab-container">
+                        <div class="tabs">
+                            <div class="tab active" data-tab="packages">Packages</div>
+                            <div class="tab" data-tab="users">Users & Security</div>
+                            <div class="tab" data-tab="network">Network</div>
+                            <div class="tab" data-tab="storage">Storage</div>
+                            <div class="tab" data-tab="scripts">Scripts</div>
+                        </div>
+                        
+                        <div class="tab-content active" id="packages-tab">
+                            <div class="form-group">
+                                <label>Common Packages</label>
+                                <div class="checkbox-grid">
+                                    <div class="checkbox-item">
+                                        <input type="checkbox" id="nginx" value="nginx">
+                                        <label for="nginx">Nginx</label>
+                                    </div>
+                                    <div class="checkbox-item">
+                                        <input type="checkbox" id="apache" value="apache2">
+                                        <label for="apache">Apache</label>
+                                    </div>
+                                    <div class="checkbox-item">
+                                        <input type="checkbox" id="docker" value="docker">
+                                        <label for="docker">Docker</label>
+                                    </div>
+                                    <div class="checkbox-item">
+                                        <input type="checkbox" id="nodejs" value="nodejs">
+                                        <label for="nodejs">Node.js</label>
+                                    </div>
+                                    <div class="checkbox-item">
+                                        <input type="checkbox" id="python3" value="python3">
+                                        <label for="python3">Python 3</label>
+                                    </div>
+                                    <div class="checkbox-item">
+                                        <input type="checkbox" id="git" value="git">
+                                        <label for="git">Git</label>
+                                    </div>
+                                    <div class="checkbox-item">
+                                        <input type="checkbox" id="curl" value="curl">
+                                        <label for="curl">cURL</label>
+                                    </div>
+                                    <div class="checkbox-item">
+                                        <input type="checkbox" id="htop" value="htop">
+                                        <label for="htop">htop</label>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="custom-packages">Custom Packages (comma separated)</label>
+                                <input type="text" id="custom-packages" placeholder="e.g., vim, tmux, postgresql">
+                            </div>
+                        </div>
+                        
+                        <div class="tab-content" id="users-tab">
+                            <div class="form-group">
+                                <label for="username">Username</label>
+                                <input type="text" id="username" placeholder="Enter username">
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="ssh-key">SSH Public Key</label>
+                                <textarea id="ssh-key" rows="4" placeholder="Paste your SSH public key here"></textarea>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="sudo-access">Sudo Access</label>
+                                <select id="sudo-access">
+                                    <option value="none">No sudo access</option>
+                                    <option value="password">Sudo with password</option>
+                                    <option value="nopasswd" selected>Sudo without password</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="tab-content" id="network-tab">
+                            <div class="form-group">
+                                <label for="hostname">Hostname</label>
+                                <input type="text" id="hostname" placeholder="Enter hostname">
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="http-proxy">HTTP Proxy</label>
+                                <input type="text" id="http-proxy" placeholder="http://proxy.example.com:8080">
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="https-proxy">HTTPS Proxy</label>
+                                <input type="text" id="https-proxy" placeholder="https://proxy.example.com:8080">
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="no-proxy">No Proxy (comma separated)</label>
+                                <input type="text" id="no-proxy" placeholder="localhost,127.0.0.1,.internal">
+                            </div>
+                        </div>
+                        
+                        <div class="tab-content" id="storage-tab">
+                            <div class="form-group">
+                                <label for="mount-point">Mount Point</label>
+                                <input type="text" id="mount-point" placeholder="/mnt/data">
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="device-name">Device Name</label>
+                                <input type="text" id="device-name" placeholder="/dev/xvdf">
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="file-system">File System</label>
+                                <select id="file-system">
+                                    <option value="ext4">ext4</option>
+                                    <option value="xfs">xfs</option>
+                                    <option value="ntfs">NTFS</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="tab-content" id="scripts-tab">
+                            <div class="form-group">
+                                <label for="custom-script">Custom Script</label>
+                                <textarea id="custom-script" rows="6" placeholder="Add any custom shell commands here"></textarea>
+                                <small>For Windows, use PowerShell syntax. For Linux, use bash syntax.</small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <button id="generate-btn" class="btn btn-block">
+                        <i class="fas fa-rocket"></i> Generate User Data
+                    </button>
+                    
+                    <div id="notification" class="notification hidden"></div>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">
+                        <i class="fas fa-code"></i> Generated User Data
+                    </h2>
+                </div>
+                <div class="card-body">
+                    <div class="output-header">
+                        <div>
+                            <span>Format: </span>
+                            <span id="format-type">Cloud Config (YAML)</span>
+                        </div>
+                        <div id="os-badge" class="os-badge badge-ubuntu">Ubuntu</div>
+                    </div>
+                    <textarea id="raw-output"></textarea>
+                    <div class="output-container" id="output">
+# Cloud-init configuration will appear here
+# Select options and click "Generate" to create your configuration
+                    </div>
+                    <div class="actions">
+                        <button id="copy-btn" class="btn btn-secondary">
+                            <i class="fas fa-copy"></i> Copy to Clipboard
+                        </button>
+                        <button id="download-btn" class="btn btn-secondary">
+                            <i class="fas fa-download"></i> Download
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <p>CloudScript &copy; 2025 | Craft cloud-init user data for IBM Cloud, AWS, Azure, GCP, and more</p>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // OS selection
+            const osOptions = document.querySelectorAll('.os-option');
+            let selectedOS = 'ubuntu';
+            
+            osOptions.forEach(option => {
+                option.addEventListener('click', function() {
+                    osOptions.forEach(opt => opt.classList.remove('selected'));
+                    this.classList.add('selected');
+                    selectedOS = this.getAttribute('data-os');
+                    
+                    // Update OS badge
+                    const osBadge = document.getElementById('os-badge');
+                    osBadge.textContent = getOSDisplayName(selectedOS);
+                    osBadge.className = `os-badge badge-${selectedOS}`;
+                    
+                    // Update format type
+                    const formatType = document.getElementById('format-type');
+                    formatType.textContent = 'Cloud Config (YAML)';
+                });
+            });
+            
+            // Tab functionality
+            const tabs = document.querySelectorAll('.tab');
+            tabs.forEach(tab => {
+                tab.addEventListener('click', function() {
+                    tabs.forEach(t => t.classList.remove('active'));
+                    document.querySelectorAll('.tab-content').forEach(content => {
+                        content.classList.remove('active');
+                    });
+                    
+                    this.classList.add('active');
+                    const tabId = this.getAttribute('data-tab') + '-tab';
+                    document.getElementById(tabId).classList.add('active');
+                });
+            });
+            
+            // Generate button functionality
+            document.getElementById('generate-btn').addEventListener('click', function() {
+                generateUserData();
+            });
+            
+            // Copy button functionality
+            document.getElementById('copy-btn').addEventListener('click', async function() {
+                const output = document.getElementById('raw-output').value;
+                try {
+                    await navigator.clipboard.writeText(output);
+                    showNotification('Configuration copied to clipboard!', 'success');
+                } catch (err) {
+                    showNotification('Failed to copy to clipboard', 'warning');
+                }
+            });
+            
+            // Download button functionality
+            document.getElementById('download-btn').addEventListener('click', function() {
+                const output = document.getElementById('raw-output').value;
+                const lineEnding = selectedOS === 'windows' ? '\r\n' : '\n';
+                const formattedOutput = output.replace(/\n/g, lineEnding);
+                const blob = new Blob([formattedOutput], { type: 'text/plain;charset=utf-8' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `userdata-${selectedOS}.yml`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                
+                showNotification('File downloaded successfully!', 'success');
+            });
+            
+            // Documentation button
+            document.getElementById('docs-btn').addEventListener('click', function() {
+                window.open('https://cloudinit.readthedocs.io/en/latest/', '_blank');
+            });
+            
+            const packageMapping = {
+                ubuntu: {
+                    nginx: 'nginx',
+                    apache: 'apache2',
+                    docker: 'docker.io',
+                    nodejs: 'nodejs',
+                    python3: 'python3',
+                    git: 'git',
+                    curl: 'curl',
+                    htop: 'htop'
+                },
+                debian: {
+                    nginx: 'nginx',
+                    apache: 'apache2',
+                    docker: 'docker.io',
+                    nodejs: 'nodejs',
+                    python3: 'python3',
+                    git: 'git',
+                    curl: 'curl',
+                    htop: 'htop'
+                },
+                centos: {
+                    nginx: 'nginx',
+                    apache: 'httpd',
+                    docker: 'docker-ce',
+                    nodejs: 'nodejs',
+                    python3: 'python3',
+                    git: 'git',
+                    curl: 'curl',
+                    htop: 'htop'
+                },
+                amazon: {
+                    nginx: 'nginx',
+                    apache: 'httpd',
+                    docker: 'docker', 
+                    nodejs: 'nodejs',
+                    python3: 'python3',
+                    git: 'git',
+                    curl: 'curl',
+                    htop: 'htop'
+                },
+                rhel: {
+                    nginx: 'nginx',
+                    apache: 'httpd',
+                    docker: 'docker-ce',
+                    nodejs: 'nodejs',
+                    python3: 'python3',
+                    git: 'git',
+                    curl: 'curl',
+                    htop: 'htop'
+                },
+                suse: {
+                    nginx: 'nginx',
+                    apache: 'apache2',
+                    docker: 'docker',
+                    nodejs: 'nodejs',
+                    python3: 'python3',
+                    git: 'git',
+                    curl: 'curl',
+                    htop: 'htop'
+                },
+                windows: {
+                    nginx: 'nginx',
+                    apache: 'apache-httpd',
+                    docker: 'docker-desktop',
+                    nodejs: 'nodejs',
+                    python3: 'python',
+                    git: 'git',
+                    curl: 'curl',
+                    htop: null
+                }
+            };
+
+            function generateUserData() {
+                const username = document.getElementById('username').value;
+                const sshKey = document.getElementById('ssh-key').value;
+                const sudoAccess = document.getElementById('sudo-access').value;
+                const hostname = document.getElementById('hostname').value;
+                const httpProxy = document.getElementById('http-proxy').value;
+                const httpsProxy = document.getElementById('https-proxy').value;
+                const noProxy = document.getElementById('no-proxy').value;
+                const mountPoint = document.getElementById('mount-point').value;
+                const deviceName = document.getElementById('device-name').value;
+                const fileSystem = document.getElementById('file-system').value;
+                const customScript = document.getElementById('custom-script').value;
+                
+                // Get selected packages with OS-specific mapping
+                let selectedPackages = [];
+                document.querySelectorAll('#packages-tab input[type="checkbox"]:checked').forEach(checkbox => {
+                    const pkgId = checkbox.id;
+                    const osPkg = packageMapping[selectedOS]?.[pkgId];
+                    if (osPkg) {
+                        selectedPackages.push(osPkg);
+                    }
+                });
+                
+                // Get custom packages
+                const customPackagesInput = document.getElementById('custom-packages').value;
+                if (customPackagesInput) {
+                    const customPackages = customPackagesInput.split(',').map(pkg => pkg.trim());
+                    selectedPackages.push(...customPackages);
+                }
+                
+                // Generate configuration based on OS
+                let userData = '';
+                
+                if (selectedOS === 'windows') {
+                    userData = generateWindowsUserData(selectedOS, selectedPackages, username, sshKey, sudoAccess, hostname, httpProxy, httpsProxy, noProxy, mountPoint, deviceName, fileSystem, customScript);
+                } else {
+                    userData = generateLinuxUserData(selectedOS, selectedPackages, username, sshKey, sudoAccess, hostname, httpProxy, httpsProxy, noProxy, mountPoint, deviceName, fileSystem, customScript);
+                }
+                
+                document.getElementById('output').innerText = userData;
+                document.getElementById('raw-output').value = userData;
+                showNotification('Cloud-init configuration generated successfully!', 'success');
+            }
+            
+            function generateLinuxUserData(os, packages, username, sshKey, sudoAccess, hostname, 
+                                          httpProxy, httpsProxy, noProxy, mountPoint, deviceName, fileSystem, customScript) {
+                let userData = `#cloud-config\n# Generated for ${getOSDisplayName(os)}\n\n`;
+                
+                let bootCmd = [];
+                let extraRuncmd = ['echo "Welcome to $(hostname)" > /etc/motd'];
+
+                // OS-specific groups for sudo
+                let sudoGroups = [];
+                if (['ubuntu', 'debian'].includes(os)) {
+                    sudoGroups = ['adm', 'sudo'];
+                } else {
+                    sudoGroups = ['wheel'];
+                }
+
+                // OS-specific package update/upgrade
+                const isDebianLike = ['ubuntu', 'debian'].includes(os);
+                const isRedhatLike = ['centos', 'rhel', 'amazon'].includes(os);
+                const isSuse = os === 'suse';
+
+                // Special handling for packages
+                if (isRedhatLike && (packages.includes('htop') || packages.includes('docker-ce') || packages.includes('nginx'))) {
+                    bootCmd.push('yum install -y epel-release');
+                    if (packages.includes('docker-ce')) {
+                        bootCmd.push('yum install -y yum-utils');
+                        bootCmd.push('yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo');
+                    }
+                }
+
+                if (os === 'amazon' && packages.includes('docker')) {
+                    packages = packages.filter(p => p !== 'docker');
+                    extraRuncmd.push('amazon-linux-extras install docker');
+                    extraRuncmd.push('systemctl enable docker');
+                    extraRuncmd.push('systemctl start docker');
+                }
+
+                // Bootcmd if any
+                if (bootCmd.length > 0) {
+                    userData += `bootcmd:\n`;
+                    bootCmd.forEach(cmd => {
+                        userData += `  - ${cmd}\n`;
+                    });
+                }
+
+                // Set hostname
+                if (hostname) {
+                    userData += `hostname: ${hostname}\n`;
+                }
+
+                // Package management
+                if (packages.length > 0) {
+                    userData += `package_update: true\n`;
+                    if (isDebianLike) {
+                        userData += `package_upgrade: true\n`;
+                    }
+                    userData += `packages:\n`;
+                    packages.forEach(pkg => {
+                        userData += `  - ${pkg}\n`;
+                    });
+                }
+
+                // User configuration
+                if (username) {
+                    userData += `\nusers:\n  - default\n`;
+                    userData += `  - name: ${username}\n`;
+                    userData += `    gecos: ${username}\n`;
+                    userData += `    shell: /bin/bash\n`;
+                    userData += `    groups: [${sudoGroups.join(', ')}]\n`;
+                    
+                    if (sudoAccess === 'nopasswd') {
+                        userData += `    sudo: ALL=(ALL) NOPASSWD:ALL\n`;
+                    } else if (sudoAccess === 'password') {
+                        userData += `    sudo: ALL=(ALL) ALL\n`;
+                    }
+                    
+                    if (sshKey) {
+                        userData += `    ssh_authorized_keys:\n      - ${sshKey}\n`;
+                    }
+                }
+                
+                // Proxy configuration
+                if (httpProxy || httpsProxy || noProxy) {
+                    userData += `\nwrite_files:\n`;
+                    let content = '';
+                    if (httpProxy) {
+                        content += `      http_proxy=${httpProxy}\n      HTTP_PROXY=${httpProxy}\n`;
+                    }
+                    if (httpsProxy) {
+                        content += `      https_proxy=${httpsProxy}\n      HTTPS_PROXY=${httpsProxy}\n`;
+                    }
+                    if (noProxy) {
+                        content += `      no_proxy=${noProxy}\n      NO_PROXY=${noProxy}\n`;
+                    }
+                    userData += `  - content: |\n${content}`;
+                    userData += `    path: /etc/environment\n    append: true\n`;
+                }
+                
+                // Storage configuration
+                if (mountPoint && deviceName && fileSystem) {
+                    userData += `\ndisk_setup:\n  ${deviceName}:\n    table_type: mbr\n    layout: true\n    overwrite: false\n`;
+                    userData += `fs_setup:\n  - label: data\n    filesystem: ${fileSystem}\n    device: ${deviceName}\n    partition: auto\n`;
+                    userData += `mounts:\n  - [${deviceName}, ${mountPoint}]\n`;
+                }
+
+                // NTP
+                userData += `\nntp:\n  enabled: true\n`;
+
+                // OS-specific firewall and services
+                if (isDebianLike) {
+                    extraRuncmd.push('ufw allow OpenSSH && ufw --force enable');
+                } else if (isRedhatLike || isSuse) {
+                    extraRuncmd.push('systemctl enable --now firewalld');
+                    extraRuncmd.push('firewall-cmd --permanent --add-service=ssh && firewall-cmd --reload');
+                }
+                extraRuncmd.push('systemctl enable --now chronyd || true');
+
+                // Custom script
+                let customCommands = [];
+                if (customScript) {
+                    customCommands = customScript.split('\n').filter(cmd => cmd.trim());
+                }
+
+                // Combine extra and custom runcmd
+                const allRuncmd = [...extraRuncmd, ...customCommands];
+                if (allRuncmd.length > 0) {
+                    userData += `\nruncmd:\n`;
+                    allRuncmd.forEach(cmd => {
+                        userData += `  - ${cmd}\n`;
+                    });
+                }
+
+                userData += `final_message: "cloud-init done."\n`;
+                
+                return userData;
+            }
+            
+            function generateWindowsUserData(os, packages, username, sshKey, sudoAccess, hostname, httpProxy, httpsProxy, noProxy, mountPoint, deviceName, fileSystem, customScript) {
+                let userData = `#cloud-config\n# Generated for ${getOSDisplayName(os)}\n\n`;
+
+                // Set hostname
+                if (hostname) {
+                    userData += `set_hostname: ${hostname}\n`;
+                }
+
+                // User configuration (hardcode password warning)
+                if (username) {
+                    userData += `\nusers:\n`;
+                    userData += `  - name: ${username}\n`;
+                    userData += `    groups: [Administrators]\n`;
+                    userData += `    passwd: ChangeMe123!  # WARNING: Change this password immediately after launch\n`;
+                    userData += `    inactive: false\n`;
+                }
+
+                // Proxy configuration using runcmd
+                let proxyCmds = [];
+                if (httpProxy) {
+                    proxyCmds.push(`powershell -Command "[Environment]::SetEnvironmentVariable('HTTP_PROXY', '${httpProxy}', 'Machine') "`);
+                }
+                if (httpsProxy) {
+                    proxyCmds.push(`powershell -Command "[Environment]::SetEnvironmentVariable('HTTPS_PROXY', '${httpsProxy}', 'Machine') "`);
+                }
+                if (noProxy) {
+                    proxyCmds.push(`powershell -Command "[Environment]::SetEnvironmentVariable('NO_PROXY', '${noProxy}', 'Machine') "`);
+                }
+
+                // Packages using Chocolatey in runcmd
+                let packageCmds = [];
+                if (packages.length > 0) {
+                    packageCmds.push("powershell -Command \"Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1')) \"");
+                    packages.forEach(pkg => {
+                        if (pkg) {
+                            packageCmds.push(`powershell -Command "choco install ${pkg} -y"`);
+                        }
+                    });
+                }
+
+                // Storage for Windows using runcmd (simple init raw disks)
+                let storageCmds = [];
+                if (mountPoint && deviceName && fileSystem) {
+                    storageCmds.push('powershell -Command "Get-Disk | Where partitionstyle -eq \'raw\' | Initialize-Disk -PartitionStyle MBR -PassThru | New-Partition -AssignDriveLetter -UseMaximumSize | Format-Volume -FileSystem NTFS -NewFileSystemLabel \'data\' -Confirm:$false"');
+                }
+
+                // Custom script as powershell command
+                let customCommands = [];
+                if (customScript) {
+                    customCommands.push(`powershell -NoProfile -ExecutionPolicy Bypass -Command "${customScript.replace(/"/g, '\\"')}"`);
+                }
+
+                // Extra commands like sample
+                let extraRuncmd = ['powershell -Command " \'Windows init complete $(hostname)\' | Out-File C:\\init.txt -Encoding ascii "'];
+
+                // NTP
+                userData += `\nntp:\n  enabled: true\n  servers: ['time.windows.com']\n`;
+
+                // Combine all runcmd
+                const allRuncmd = [...proxyCmds, ...packageCmds, ...storageCmds, ...customCommands, ...extraRuncmd];
+                if (allRuncmd.length > 0) {
+                    userData += `\nruncmd:\n`;
+                    allRuncmd.forEach(cmd => {
+                        userData += `  - ${cmd}\n`;
+                    });
+                }
+
+                return userData;
+            }
+            
+            function getOSDisplayName(os) {
+                const osNames = {
+                    'ubuntu': 'Ubuntu',
+                    'centos': 'CentOS',
+                    'windows': 'Windows',
+                    'debian': 'Debian',
+                    'amazon': 'Amazon Linux',
+                    'rhel': 'Red Hat Enterprise Linux',
+                    'suse': 'SUSE Linux'
+                };
+                return osNames[os] || os;
+            }
+            
+            function showNotification(message, type) {
+                const notification = document.getElementById('notification');
+                notification.textContent = message;
+                notification.className = `notification ${type} visible`;
+                
+                setTimeout(() => {
+                    notification.classList.remove('visible');
+                    notification.classList.add('hidden');
+                }, 3000);
+            }
+        });
+    </script>
+</body>
+</html>
