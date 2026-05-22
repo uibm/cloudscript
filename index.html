@@ -548,10 +548,17 @@
                             </div>
                             
                             <div class="form-group">
-                                <label for="ssh-key">SSH Public Key</label>
-                                <textarea id="ssh-key" rows="4" placeholder="Paste your SSH public key here"></textarea>
+                                <label for="ssh-key">SSH Public Key(s)</label>
+                                <textarea id="ssh-key" rows="4" placeholder="Paste one SSH public key per line"></textarea>
+                                <small style="color:#6b7280;">One key per line. Lines starting with # are ignored.</small>
                             </div>
-                            
+
+                            <div class="form-group">
+                                <label for="windows-password">Windows Password <small style="color:#6b7280;">(Windows only)</small></label>
+                                <input type="text" id="windows-password" placeholder="Leave blank to skip; you can also set via Windows on first boot" autocomplete="off">
+                                <small style="color:#6b7280;">Required only for Windows. Leave blank to omit the passwd line entirely.</small>
+                            </div>
+
                             <div class="form-group">
                                 <label for="sudo-access">Sudo Access</label>
                                 <select id="sudo-access">
@@ -820,6 +827,7 @@
                 const deviceName = document.getElementById('device-name').value;
                 const fileSystem = document.getElementById('file-system').value;
                 const customScript = document.getElementById('custom-script').value;
+                const windowsPassword = document.getElementById('windows-password').value;
                 
                 // Get selected packages with OS-specific mapping
                 let selectedPackages = [];
@@ -842,7 +850,7 @@
                 let userData = '';
                 
                 if (selectedOS === 'windows') {
-                    userData = generateWindowsUserData(selectedOS, selectedPackages, username, sshKey, sudoAccess, hostname, httpProxy, httpsProxy, noProxy, mountPoint, deviceName, fileSystem, customScript);
+                    userData = generateWindowsUserData(selectedOS, selectedPackages, username, sshKey, sudoAccess, hostname, httpProxy, httpsProxy, noProxy, mountPoint, deviceName, fileSystem, customScript, windowsPassword);
                 } else {
                     userData = generateLinuxUserData(selectedOS, selectedPackages, username, sshKey, sudoAccess, hostname, httpProxy, httpsProxy, noProxy, mountPoint, deviceName, fileSystem, customScript);
                 }
@@ -928,25 +936,36 @@
                     }
                     
                     if (sshKey) {
-                        userData += `    ssh_authorized_keys:\n      - ${sshKey}\n`;
+                        const sshKeys = sshKey
+                            .split(/\r?\n/)
+                            .map(k => k.trim())
+                            .filter(k => k.length > 0 && !k.startsWith('#'));
+                        if (sshKeys.length > 0) {
+                            userData += `    ssh_authorized_keys:\n`;
+                            sshKeys.forEach(k => {
+                                userData += `      - ${k}\n`;
+                            });
+                        }
                     }
                 }
                 
-                // Proxy configuration
+                // Proxy configuration. `path` and `append` come BEFORE the
+                // `content: |` literal block scalar; otherwise the literal
+                // scalar swallows the following keys as more of its content.
                 if (httpProxy || httpsProxy || noProxy) {
                     userData += `\nwrite_files:\n`;
-                    let content = '';
+                    userData += `  - path: /etc/environment\n`;
+                    userData += `    append: true\n`;
+                    userData += `    content: |\n`;
                     if (httpProxy) {
-                        content += `      http_proxy=${httpProxy}\n      HTTP_PROXY=${httpProxy}\n`;
+                        userData += `      http_proxy=${httpProxy}\n      HTTP_PROXY=${httpProxy}\n`;
                     }
                     if (httpsProxy) {
-                        content += `      https_proxy=${httpsProxy}\n      HTTPS_PROXY=${httpsProxy}\n`;
+                        userData += `      https_proxy=${httpsProxy}\n      HTTPS_PROXY=${httpsProxy}\n`;
                     }
                     if (noProxy) {
-                        content += `      no_proxy=${noProxy}\n      NO_PROXY=${noProxy}\n`;
+                        userData += `      no_proxy=${noProxy}\n      NO_PROXY=${noProxy}\n`;
                     }
-                    userData += `  - content: |\n${content}`;
-                    userData += `    path: /etc/environment\n    append: true\n`;
                 }
                 
                 // Storage configuration
@@ -988,20 +1007,25 @@
                 return userData;
             }
             
-            function generateWindowsUserData(os, packages, username, sshKey, sudoAccess, hostname, httpProxy, httpsProxy, noProxy, mountPoint, deviceName, fileSystem, customScript) {
+            function generateWindowsUserData(os, packages, username, sshKey, sudoAccess, hostname, httpProxy, httpsProxy, noProxy, mountPoint, deviceName, fileSystem, customScript, windowsPassword) {
                 let userData = `#cloud-config\n# Generated for ${getOSDisplayName(os)}\n\n`;
 
-                // Set hostname
+                // Set hostname (cloudbase-init understands the standard cloud-init key)
                 if (hostname) {
-                    userData += `set_hostname: ${hostname}\n`;
+                    userData += `hostname: ${hostname}\n`;
                 }
 
-                // User configuration (hardcode password warning)
+                // User configuration. The passwd line is only emitted when the
+                // operator supplied a password; we never ship a hard-coded one.
                 if (username) {
                     userData += `\nusers:\n`;
                     userData += `  - name: ${username}\n`;
                     userData += `    groups: [Administrators]\n`;
-                    userData += `    passwd: ChangeMe123!  # WARNING: Change this password immediately after launch\n`;
+                    if (windowsPassword) {
+                        userData += `    passwd: ${windowsPassword}  # Rotate this password immediately after launch\n`;
+                    } else {
+                        userData += `    # passwd: set a password here or rely on RDP / Azure / EC2 reset on first boot\n`;
+                    }
                     userData += `    inactive: false\n`;
                 }
 

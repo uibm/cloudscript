@@ -89,9 +89,11 @@ This project is licensed under the MIT License. See the [LICENSE](LICENSE) file 
 
 ## Acknowledgments
 
-- Built with [Font Awesome](https://fontawesome.com) for icons.
-- Uses [Inter font](https://fonts.google.com/specimen/Inter) for typography.
-- Inspired by cloud-init and cloudbase-init documentation.
+- Icons by [Font Awesome](https://fontawesome.com) (CSS under MIT, icons under CC BY 4.0, icon font under SIL OFL 1.1), delivered via [cdnjs](https://cdnjs.com/) (Cloudflare).
+- Typography uses the [Inter](https://fonts.google.com/specimen/Inter) typeface by Rasmus Andersson (SIL Open Font License 1.1), delivered via [Google Fonts](https://fonts.google.com/).
+- Generated scripts target [cloud-init](https://cloudinit.readthedocs.io/) for Linux and [cloudbase-init](https://cloudbase-init.readthedocs.io/) for Windows.
+- Windows package installs use [Chocolatey](https://chocolatey.org/).
+- Red Hat family configurations automatically enable [EPEL](https://docs.fedoraproject.org/en-US/epel/) when needed, and Amazon Linux uses [`amazon-linux-extras`](https://docs.aws.amazon.com/linux/al2/ug/amazon-linux-extras.html) for Docker.
 
 ## Contact
 
